@@ -1,0 +1,6 @@
+max_gap_actual_vs_planned_discharge_MWh,0.0
+hours_auction_price_differs_from_LP_price,14.0
+charging_hours_paying_above_LP_value,0.0
+soc_min_MWh,0.0
+soc_max_MWh,8000.0
+final_soc_MWh,4000.0

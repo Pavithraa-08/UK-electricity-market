@@ -1,0 +1,15 @@
+scenario,No storage,Storage 2000 MW / 8000 MWh
+mean_price_GBP_per_MWh,223.99,208.2
+mean_price_excl_cap_hours,62.09,63.23
+hours_with_unserved_energy,29,21
+hours_priced_at_cap,29,26
+unserved_MWh,60326.27,41181.32
+hours_at_zero_price,11,8
+wind_GWh,1421.26,1426.15
+solar_GWh,785.46,790.57
+gas_GWh,1783.14,1798.71
+curtailed_GWh,35.97,25.97
+consumer_cost_GBP_m,862.05,802.9
+storage_discharge_GWh,,36.44
+storage_charge_GWh,,42.87
+storage_profit_GBP_m,,17.78

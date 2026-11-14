@@ -1,3 +1,4 @@
+"""Load and validate the input workbook."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -6,11 +7,13 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-THERMS_PER_MWH = 34.121  
+THERMS_PER_MWH = 34.121  # 1 MWh = 34.121 therms (from the brief)
 
 
 @dataclass(frozen=True)
 class MarketData:
+    """All inputs, aligned on the hour index (hour 1 = first row)."""
+
     hours: np.ndarray            # (T,)
     demand: np.ndarray           # (T,) MWh
     gas_price_p_per_therm: np.ndarray  # (T,)
@@ -29,10 +32,17 @@ class MarketData:
         return len(self.hours)
 
     def gas_bids(self) -> np.ndarray:
+        """Gas bid in GBP per MWh of electricity, shape (T, n_gas).
+
+        Bid = fuel cost of producing 1 MWh of electricity (breakeven, fuel only):
+            pence/therm -> GBP/therm (/100) -> GBP/MWh of gas energy (x34.121)
+            -> GBP/MWh of electricity (/efficiency).
+        """
         gbp_per_mwh_thermal = self.gas_price_p_per_therm / 100.0 * THERMS_PER_MWH
         return gbp_per_mwh_thermal[:, None] / self.gas_efficiency[None, :]
 
     def wind_available(self) -> np.ndarray:
+        """Available wind per plant, MW (== MWh in an hour), shape (T, n_wind)."""
         return self.wind_lf * self.wind_capacity[None, :]
 
     def solar_available(self) -> np.ndarray:
@@ -98,6 +108,12 @@ def _validate(md: MarketData) -> None:
         raise ValueError("Gas prices must be positive")
 
 
+# ---------------------------------------------------------------------------
+# Demo: run this file directly to SEE what load_data() returns.
+#     python dispatch/data.py                (uses data/data.xlsx)
+#     python dispatch/data.py other.xlsx     (uses another workbook)
+# Nothing below runs when the model imports this file.
+# ---------------------------------------------------------------------------
 def _demo(path: str = "data/data.xlsx") -> None:
     np.set_printoptions(suppress=True, linewidth=120, precision=4)  # plain numbers, no 1e-05 style
     md = load_data(path)
@@ -138,7 +154,7 @@ def _demo(path: str = "data/data.xlsx") -> None:
         print(f"  {name}: efficiency {eff:.2f} -> GBP {step1:.2f} / {eff:.2f} = GBP {bid:.2f} per MWh of electricity")
     print("Shape of the full bids grid (hours x plants):", md.gas_bids().shape)
     cheapest = np.array(md.gas_names)[md.gas_bids().argmin(axis=1)]
-    print("Cheapest gas plant in every hour:", sorted(set(cheapest)), "(the most efficient plant is always cheapest)")
+    print("Cheapest gas plant in every hour:", sorted(set(map(str, cheapest))), "(the most efficient plant is always cheapest)")
 
 
 if __name__ == "__main__":
