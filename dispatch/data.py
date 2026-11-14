@@ -1,4 +1,3 @@
-"""Load and validate the input workbook."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -7,37 +6,27 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-THERMS_PER_MWH = 34.121  # 1 MWh = 34.121 therms (from the brief)
-
-
+THERMS_PER_MWH = 34.121  
 @dataclass(frozen=True)
 class MarketData:
-    """All inputs, aligned on the hour index (hour 1 = first row)."""
-
-    hours: np.ndarray            # (T,)
-    demand: np.ndarray           # (T,) MWh
-    gas_price_p_per_therm: np.ndarray  # (T,)
+    hours: np.ndarray            
+    demand: np.ndarray           
+    gas_price_p_per_therm: np.ndarray  
     wind_names: list[str]
-    wind_capacity: np.ndarray    # (n_wind,) MW
-    wind_lf: np.ndarray          # (T, n_wind) 0..1
+    wind_capacity: np.ndarray    
+    wind_lf: np.ndarray          
     solar_names: list[str]
-    solar_capacity: np.ndarray   # (n_solar,) MW
-    solar_lf: np.ndarray         # (T, n_solar) 0..1
+    solar_capacity: np.ndarray   
+    solar_lf: np.ndarray         
     gas_names: list[str]
-    gas_capacity: np.ndarray     # (n_gas,) MW
-    gas_efficiency: np.ndarray   # (n_gas,) 0..1
+    gas_capacity: np.ndarray     
+    gas_efficiency: np.ndarray   
 
     @property
     def n_hours(self) -> int:
         return len(self.hours)
 
     def gas_bids(self) -> np.ndarray:
-        """Gas bid in GBP per MWh of electricity, shape (T, n_gas).
-
-        Bid = fuel cost of producing 1 MWh of electricity (breakeven, fuel only):
-            pence/therm -> GBP/therm (/100) -> GBP/MWh of gas energy (x34.121)
-            -> GBP/MWh of electricity (/efficiency).
-        """
         gbp_per_mwh_thermal = self.gas_price_p_per_therm / 100.0 * THERMS_PER_MWH
         return gbp_per_mwh_thermal[:, None] / self.gas_efficiency[None, :]
 
@@ -108,14 +97,8 @@ def _validate(md: MarketData) -> None:
         raise ValueError("Gas prices must be positive")
 
 
-# ---------------------------------------------------------------------------
-# Demo: run this file directly to SEE what load_data() returns.
-#     python dispatch/data.py                (uses data/data.xlsx)
-#     python dispatch/data.py other.xlsx     (uses another workbook)
-# Nothing below runs when the model imports this file.
-# ---------------------------------------------------------------------------
 def _demo(path: str = "data/data.xlsx") -> None:
-    np.set_printoptions(suppress=True, linewidth=120, precision=4)  # plain numbers, no 1e-05 style
+    np.set_printoptions(suppress=True, linewidth=120, precision=4)  
     md = load_data(path)
 
     print("=== 1. Time axis and demand ===")

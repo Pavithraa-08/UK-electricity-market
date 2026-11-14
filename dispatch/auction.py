@@ -1,9 +1,3 @@
-"""Hourly pay-as-clear (uniform price) auction.
-
-Every generator bids the price at which it breaks even; the system operator
-dispatches the cheapest bids first until demand is met. The bid of the last
-(marginal) unit sets the single price paid to every dispatched MWh.
-"""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -13,38 +7,30 @@ import pandas as pd
 
 from .data import MarketData
 
-DEFAULT_PRICE_CAP = 1000.0  # GBP/MWh, illustrative scarcity price (see README)
+DEFAULT_PRICE_CAP = 1000.0  
 _EPS = 1e-9
 
 
 @dataclass
 class HourResult:
     price: float
-    dispatch: np.ndarray   # MWh per offer, same order as the offers
-    unserved: float        # MWh of demand that no offer could cover
-    marginal_index: int    # index of (first) marginal offer, -1 if none
+    dispatch: np.ndarray   
+    unserved: float        
+    marginal_index: int   
 
 
 def clear_hour(bids: np.ndarray, quantities: np.ndarray, demand: float,
                price_cap: float = DEFAULT_PRICE_CAP) -> HourResult:
-    """Clear one hour.
-
-    bids / quantities: per-offer price (GBP/MWh) and maximum quantity (MWh).
-    Offers with the same bid are treated as one block and, if the demand only
-    covers part of the block, are scaled back pro rata (equal curtailment).
-    If total supply cannot meet demand the shortfall is reported as unserved
-    and the price is set to `price_cap` (no demand bids exist to set a price).
-    """
     if demand < 0:
         raise ValueError("demand must be non-negative")
     bids = np.asarray(bids, float)
     quantities = np.asarray(quantities, float)
     dispatch = np.zeros_like(quantities)
 
-    levels = np.unique(bids)  # sorted ascending
+    levels = np.unique(bids)  
     remaining = float(demand)
 
-    if remaining <= _EPS:  # nothing to serve: price is the cheapest bid
+    if remaining <= _EPS:  
         return HourResult(float(levels[0]) if len(levels) else 0.0, dispatch, 0.0, -1)
 
     for level in levels:
@@ -52,10 +38,10 @@ def clear_hour(bids: np.ndarray, quantities: np.ndarray, demand: float,
         block_qty = quantities[block].sum()
         if block_qty <= _EPS:
             continue
-        if remaining <= block_qty + _EPS:           # this block fills demand
+        if remaining <= block_qty + _EPS:           
             dispatch[block] = quantities[block] * min(remaining / block_qty, 1.0)
             return HourResult(float(level), dispatch, 0.0, int(block[0]))
-        dispatch[block] = quantities[block]         # dispatch the whole block
+        dispatch[block] = quantities[block]        
         remaining -= block_qty
 
     return HourResult(float(price_cap), dispatch, max(remaining, 0.0), -1)
@@ -64,15 +50,6 @@ def clear_hour(bids: np.ndarray, quantities: np.ndarray, demand: float,
 def run_auction(md: MarketData, net_demand: np.ndarray | None = None,
                 price_cap: float = DEFAULT_PRICE_CAP,
                 storage_offer: tuple[np.ndarray, np.ndarray] | None = None) -> pd.DataFrame:
-    """Run the auction for every hour and return a tidy per-hour table.
-
-    net_demand:    demand to serve each hour (use demand + storage charging
-                   when storage is present); defaults to the raw demand.
-    storage_offer: optional (bid GBP/MWh, quantity MWh) arrays, one value per
-                   hour, for storage discharge. It competes in the merit order
-                   like any other offer, so it only runs if the price covers
-                   its bid, and it sets the price when it is the marginal unit.
-    """
     demand = md.demand if net_demand is None else np.asarray(net_demand, float)
     wind_av, solar_av, gas_bids = md.wind_available(), md.solar_available(), md.gas_bids()
     n_w, n_s, n_g = len(md.wind_names), len(md.solar_names), len(md.gas_names)
@@ -130,12 +107,6 @@ def technology_mix(result: pd.DataFrame) -> pd.DataFrame:
     return mix
 
 
-# ---------------------------------------------------------------------------
-# Demo: run this file to SEE the auction work. From the project folder:
-#     python -m dispatch.auction
-# (it must be run with -m because this file imports from its sibling data.py)
-# Nothing below runs when the model imports this file.
-# ---------------------------------------------------------------------------
 def _demo() -> None:
     from .data import load_data
 
@@ -170,7 +141,7 @@ def _demo() -> None:
     print(f"{'plant':8}{'bid':>8}{'can give':>10}{'running total':>15}")
     for i in order:
         if bids[i] == 0 and running > 0 and names[i].startswith("solar") and qty[i] == 0:
-            continue  # hide solar plants that are producing nothing at night
+            continue  
         running += qty[i]
         print(f"{names[i]:8}{bids[i]:8.2f}{qty[i]:10.0f}{running:15.0f}")
         if running >= demand:
